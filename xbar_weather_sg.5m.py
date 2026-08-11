@@ -303,7 +303,7 @@ def get_forecast_snapshot(
         return cached_snapshot, False, None
     try:
         refreshed_snapshot = parse_forecast_payload(fetcher(TWO_HOUR_URL), now)
-    except Exception as error:
+    except Exception:
         if cached_snapshot is not None:
             return cached_snapshot, True, type(error).__name__
         return None, False, type(error).__name__
@@ -364,16 +364,15 @@ def render_menu(
         headline = f"Rain warning — {headline} | color=red"
     lines = [
         headline,
-        f"2-hour forecast: {forecast_text}",
+        "---",
         f"Valid: {valid_text}",
-        f"Heavy-rain warning: {warning_text}",
         f"Data updated: {updated_text}",
+        f"Heavy-rain warning: {warning_text}",
     ]
     if stale:
         lines.append("Forecast may be stale")
     lines.extend(sanitize_text(error) for error in errors)
     lines.extend((
-        "---",
         *render_area_menu(location),
         "---",
         "Open MSS weather | href=https://www.weather.gov.sg/weather-forecast-2hrnowcast-2/",
@@ -416,7 +415,7 @@ def main(
     try:
         warning = parse_warning_feed(fetcher(HEAVY_RAIN_URL))
     except Exception as error:
-        errors.append(f"Warning status unavailable ({type(error).__name__})")
+        errors.append("Warning status unavailable; will retry")
     else:
         notification_error = handle_warning_notification(warning, notifier, state_path)
         if notification_error is not None:

@@ -220,6 +220,17 @@ def save_location(
     _save_json_atomic({"VAR_LOCATION": location}, path)
 
 
+def load_location(path: Path = LOCATION_SIDECAR_FILE) -> str | None:
+    try:
+        with path.open(encoding="utf-8") as location_file:
+            location = json.load(location_file).get("VAR_LOCATION")
+    except (OSError, AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if location in (SETUP_SENTINEL, *SUPPORTED_AREAS):
+        return location
+    return None
+
+
 def handle_command(
     arguments: list[str], path: Path = LOCATION_SIDECAR_FILE
 ) -> bool:
@@ -378,8 +389,11 @@ def main(
     notifier=send_notification,
     cache_path: Path = FORECAST_CACHE_FILE,
     state_path: Path = WARNING_STATE_FILE,
+    location_path: Path = LOCATION_SIDECAR_FILE,
 ) -> int:
-    location = environ.get("VAR_LOCATION", SETUP_SENTINEL)
+    location = load_location(location_path) or environ.get(
+        "VAR_LOCATION", SETUP_SENTINEL
+    )
     if location == SETUP_SENTINEL:
         print("\n".join((
             "Select an area from the menu below to view its forecast.",

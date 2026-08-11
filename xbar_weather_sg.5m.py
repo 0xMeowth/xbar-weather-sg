@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 # SPDX-License-Identifier: MIT
 # <xbar.author>0xMeowth</xbar.author>
 # <xbar.version>v1.0.0</xbar.version>

@@ -303,7 +303,7 @@ def get_forecast_snapshot(
         return cached_snapshot, False, None
     try:
         refreshed_snapshot = parse_forecast_payload(fetcher(TWO_HOUR_URL), now)
-    except Exception:
+    except Exception as error:
         if cached_snapshot is not None:
             return cached_snapshot, True, type(error).__name__
         return None, False, type(error).__name__
@@ -414,7 +414,7 @@ def main(
     warning = None
     try:
         warning = parse_warning_feed(fetcher(HEAVY_RAIN_URL))
-    except Exception as error:
+    except Exception:
         errors.append("Warning status unavailable; will retry")
     else:
         notification_error = handle_warning_notification(warning, notifier, state_path)

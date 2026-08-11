@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-
 # SPDX-License-Identifier: MIT
 # <xbar.author>0xMeowth</xbar.author>
 # <xbar.version>v1.0.0</xbar.version>
@@ -8,12 +6,16 @@ from __future__ import annotations
 # <xbar.dependencies>python3</xbar.dependencies>
 # <xbar.var>select(VAR_LOCATION="Select an area"): Forecast area. [Select an area, Ang Mo Kio, Bedok, Bishan, Boon Lay, Bukit Batok, Bukit Merah, Bukit Panjang, Bukit Timah, Central Water Catchment, Changi, Choa Chu Kang, City, Clementi, Geylang, Hougang, Jalan Bahar, Jurong East, Jurong Island, Jurong West, Kallang, Lim Chu Kang, Mandai, Marine Parade, Novena, Pasir Ris, Paya Lebar, Pioneer, Pulau Tekong, Pulau Ubin, Punggol, Queenstown, Seletar, Sembawang, Sengkang, Sentosa, Serangoon, Southern Islands, Sungei Kadut, Tampines, Tanglin, Tengah, Toa Payoh, Tuas, Western Islands, Western Water Catchment, Woodlands, Yishun]</xbar.var>
 
+from __future__ import annotations
+
 import hashlib
 import html
 import json
 import os
 import re
+import shlex
 import subprocess
+import sys
 import tempfile
 import urllib.request
 from dataclasses import dataclass
@@ -42,6 +44,7 @@ ALLOWED_URLS = frozenset({TWO_HOUR_URL, HEAVY_RAIN_URL})
 CACHE_DIR = Path.home() / "Library" / "Caches" / "xbar-weather-sg"
 FORECAST_CACHE_FILE = CACHE_DIR / "forecast.json"
 WARNING_STATE_FILE = CACHE_DIR / "warning-state.json"
+LOCATION_SIDECAR_FILE = Path(f"{__file__}.vars.json")
 FORECAST_TTL = timedelta(minutes=30)
 ATOM = "{http://www.w3.org/2005/Atom}"
 NOTIFICATION_SCRIPT = """on run argv
@@ -209,6 +212,25 @@ def _save_json_atomic(data: dict, path: Path) -> None:
             temporary_path.unlink()
 
 
+def save_location(
+    location: str, path: Path = LOCATION_SIDECAR_FILE
+) -> None:
+    if location not in (SETUP_SENTINEL, *SUPPORTED_AREAS):
+        raise ValueError("unsupported forecast area")
+    _save_json_atomic({"VAR_LOCATION": location}, path)
+
+
+def handle_command(
+    arguments: list[str], path: Path = LOCATION_SIDECAR_FILE
+) -> bool:
+    if not arguments:
+        return False
+    if len(arguments) != 2 or arguments[0] != "--set-location":
+        raise ValueError("unsupported command")
+    save_location(arguments[1], path)
+    return True
+
+
 def save_forecast_cache(
     snapshot: ForecastSnapshot, path: Path = FORECAST_CACHE_FILE
 ) -> None:
@@ -289,6 +311,22 @@ def format_sgt(value: datetime) -> str:
     return value.astimezone(timezone(timedelta(hours=8))).strftime("%H:%M")
 
 
+def render_area_menu(
+    location: str, script_path: Path = Path(__file__)
+) -> list[str]:
+    command = (
+        f"shell={shlex.quote(str(script_path))} param1=--set-location "
+        "terminal=false refresh=true"
+    )
+    lines = [f"Forecast area: {sanitize_text(location)}"]
+    for area in sorted(SUPPORTED_AREAS):
+        marker = "✓ " if area == location else ""
+        lines.append(
+            f"--{marker}{area} | {command} param2={shlex.quote(area)}"
+        )
+    return lines
+
+
 def render_menu(
     location: str,
     forecast: ForecastSnapshot | None,
@@ -325,6 +363,8 @@ def render_menu(
     lines.extend(sanitize_text(error) for error in errors)
     lines.extend((
         "---",
+        *render_area_menu(location),
+        "---",
         "Open MSS weather | href=https://www.weather.gov.sg/weather-forecast-2hrnowcast-2/",
         "Open heavy-rain warnings | href=https://www.weather.gov.sg/warning-heavy-rain/",
     ))
@@ -341,7 +381,11 @@ def main(
 ) -> int:
     location = environ.get("VAR_LOCATION", SETUP_SENTINEL)
     if location == SETUP_SENTINEL:
-        print("Select an area from the xbar menu to view its forecast.")
+        print("\n".join((
+            "Select an area from the menu below to view its forecast.",
+            "---",
+            *render_area_menu(location),
+        )))
         return 0
 
     forecast, stale, forecast_error = get_forecast_snapshot(
@@ -371,4 +415,5 @@ def main(
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    if not handle_command(sys.argv[1:]):
+        raise SystemExit(main())

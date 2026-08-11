@@ -1,4 +1,4 @@
-# Singapore Weather for xbar
+# Singapore Weather for macOS menu bar
 
 An xbar plugin that shows the official two-hour forecast for one manually
 selected Singapore area and alerts you to official nationwide heavy-rain
@@ -14,6 +14,8 @@ warnings.
 - Shows official warnings as national, unfiltered messages; it does not infer
   whether a warning applies to the selected area.
 - Uses macOS notifications once per distinct active warning.
+- No account or API key is needed. The plugin uses public endpoints from
+  data.gov.sg and Meteorological Service Singapore (MSS).
 
 ## Privacy
 
@@ -22,14 +24,22 @@ warnings.
 - The plugin never sends public IP address, Wi-Fi information, network
   identity, or any other location proxy to a service.
 - Runtime requests are limited to the two official URLs listed below.
-- xbar may create a local-only `*.vars.json` file after you select an area.
-  Keep it private; do not commit or publish it.
+- xbar creates a local-only `*.vars.json` file after you select an area. Keep
+  it private: do not commit or publish it, and add it to `.gitignore` if you
+  keep the plugin in a Git repository. If you do not use Git, it stays on your
+  computer by default and you do not need to do anything.
 
 ## Requirements
 
 - macOS
 - [xbar](https://xbarapp.com/)
 - Python 3
+
+## Tested on
+
+- macOS 27.0 (build 26A5388g)
+- xbar v2.1.7-beta
+- Apple-provided Python 3.9.6
 
 ## Install
 
@@ -53,9 +63,10 @@ Forecast data comes from the official [data.gov.sg two-hour forecast API](https:
 https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast
 ```
 
-These endpoints need no API key. The unauthenticated public data.gov.sg limit
-is 6 requests per 10 seconds; the 30-minute forecast cache stays below that
-limit during normal use.
+No account or API key is required for the public requests used by this plugin.
+data.gov.sg offers optional keys with higher rate limits; the unauthenticated
+public limit is 6 requests per 10 seconds. The 30-minute forecast cache stays
+below that limit during normal use.
 
 Heavy-rain warnings come from the official [Meteorological Service Singapore feed](https://www.weather.gov.sg/files/rss/rssHeavyRain_new.xml):
 
